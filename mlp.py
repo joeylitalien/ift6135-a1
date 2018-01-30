@@ -1,47 +1,61 @@
-# -*- coding: utf-8 -*-
+# IFT 6135: Representation Learning
+# Assignment 1
+# Authors: Samuel Laferrièe & Joey Litalien
+
 import torch
 from torch.autograd import Variable
 import torch.nn as nn
+import torch.optim as optim
+import torchvision.datasets as data
+import torchvision.transforms as transforms
 
-class MLP(nn.Module):
-    def __init__(self, D_in, H, D_out):
-        super(TwoLayerNet, self).__init__()
-        self.linear1 = torch.nn.Linear(D_in, H)
-        self.linear2 = torch.nn.Linear(H, D_out)
+# Model parameters
+batch_size = 100
+D_in, H1, H2, D_out = 784, 512, 256, 10
+learning_rate = 1e-4
+nb_epochs = 10
+root = './data'
 
-    def forward(self, x):
-        h_relu = self.linear1(x).clamp(min=0)
-        y_pred = self.linear2(h_relu)
-        return y_pred
+# Load MNIST dataset
+norm = transforms.Compose([transforms.ToTensor(), 
+    transforms.Normalize((0.5,), (1.0,))])
 
+train_loader = torch.utils.data.DataLoader(
+    data.MNIST(root, train=True, download=True, transform=norm),
+    batch_size=batch_size, shuffle=True)
 
-# N is batch size; D_in is input dimension;
-# H is hidden dimension; D_out is output dimension.
-N, D_in, H, D_out = 64, 1000, 100, 10
+test_loader = torch.utils.data.DataLoader(
+    data.MNIST(root, train=False, transform=norm),
+    batch_size=batch_size, shuffle=True)
 
-# Create random Tensors to hold inputs and outputs, and wrap them in Variables
-x = Variable(torch.randn(N, D_in))
-y = Variable(torch.randn(N, D_out), requires_grad=False)
+# MLP with 2 hidden layers
+model = nn.Sequential(
+    nn.Linear(D_in, H1),
+    nn.ReLU(),
+    nn.Linear(H1, H2),
+    nn.ReLU(),
+    nn.Linear(H2, D_out)
+    )
 
-# Construct our model by instantiating the class defined above
-model = MLP(D_in, H, D_out)
+# Loss function
+criterion = nn.BCELoss()
+optimizer = optim.SGD(model.parameters(), lr=learning_rate)
 
-# Construct our loss function and an Optimizer. The call to model.parameters()
-# in the SGD constructor will contain the learnable parameters of the two
-# nn.Linear modules which are members of the model.
-criterion = torch.nn.MSELoss(size_average=False)
-optimizer = torch.optim.SGD(model.parameters(), lr=1e-4)
-for t in range(500):
-    # Forward pass: Compute predicted y by passing x to the model
-    y_pred = model(x)
+# Training
+for t in range(nb_epochs):
+    # Mini-batch
+    for batch_idx, (x, y) in enumerate(train_loader):
+        # Forward pass
+        x = x.view(batch_size, -1)
+        x, y = Variable(x), Variable(y)
+        y_pred = model(x)
+        print(x.size(), y.size(), y_pred.size())
 
-    # Compute and print loss
-    loss = criterion(y_pred, y)
-    if t % 100 == 0:
+        # Compute and print loss
+        loss = criterion(y_pred, y)
         print(t, loss.data[0])
 
-    # Zero gradients, perform a backward pass, and update the weights.
-    optimizer.zero_grad()
-    loss.backward()
-    optimizer.step()
-
+        # Zero gradients, perform a backward pass, and update the weights
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
