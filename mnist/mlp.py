@@ -1,6 +1,6 @@
 # IFT 6135: Representation Learning
 # Assignment 1: Multilayer Perceptron
-# Authors: Samuel Laferrière & Joey Litalien
+# Authors: Samuel Laferriere & Joey Litalien
 
 import torch
 import torch.nn as nn
@@ -9,139 +9,162 @@ import torch.optim as optim
 import torchvision.datasets as data
 import torchvision.transforms as transforms
 import matplotlib.pyplot as plt
+from utils import *
 
 
 # Model parameters
 batch_size = 50
 h0, h1, h2, h3 = 784, 512, 512, 10
 learning_rate = 1e-2
-nb_epochs = 10
-root = './data'
+init = "glorot"
+nb_epochs = 5
+data_dir = "./data"
 cuda = False
 
-# torch.manual_seed(17)
 
-# Load MNIST dataset (normalized)
-mnist = transforms.Compose([transforms.ToTensor(),
-                            transforms.Normalize((0.1307,), (0.3081,))])
+# MNIST dataset normalization
+normalize = transforms.Compose([transforms.ToTensor(),
+                transforms.Normalize((0.1307,), (0.3081,))])
 
+# Training set
+train_data = data.MNIST(root=data_dir, train=True, 
+                download=True, transform=normalize)
+
+# Training set loader
 train_loader = torch.utils.data.DataLoader(
-    data.MNIST(root, train=True, download=True, transform=mnist),
-    batch_size=batch_size, shuffle=True)
+                    train_data, 
+                    batch_size=batch_size, 
+                    shuffle=True)
 
+# Test set
+test_data = data.MNIST(root=data_dir, train=False, 
+                       download=False, transform=normalize)
+
+# Test set loader
 test_loader = torch.utils.data.DataLoader(
-    data.MNIST(root, train=False, transform=mnist),
-    batch_size=1, shuffle=True)
+                    test_data,
+                    batch_size=batch_size,
+                    shuffle=True)
 
-#print(iter(train_loader).next()[0][0])
 
-def plot(losses):
-    """ Plot loss/epoch """
-    plt.plot(losses, 'ro')
+def plot(pts):
+    """ Plot _ per epoch """
+
+    plt.plot(pts, 'ro')
     plt.show()
 
-def init_weights(m):
-    """ Initialize weights """
-    if isinstance(m, nn.Linear):
-        m.bias.data.fill_(0)
-        # m.bias.data.normal_(0,1)
-        # m.weight.data.fill_(0)
-        # m.weight.data.normal_(0,1)
-        # m.weight.data.uniform_(0,1)
-        nn.init.xavier_uniform(m.weight.data)
+
+def init_weights(tensor):
+    """ Weight initialization methods (default: Xavier) """
+
+    def weights(tensor, init="glorot"):
+        if isinstance(tensor, nn.Linear):
+            tensor.bias.data.fill_(0)
+            if init == "zeros":
+                tensor.weight.data.fill_(0)
+            elif init == "uniform":
+                tensor.weight.data.uniform_(0,1)
+            else:
+                nn.init.xavier_uniform(tensor.weight.data)
+
+    return weights(tensor, init)
 
 
-# MLP with 2 hidden layers
-model = nn.Sequential(
-            nn.Linear(h0, h1), nn.ReLU(),
-            nn.Linear(h1, h2), nn.ReLU(),
-            nn.Linear(h2, h3)
-        )
+def predict(data_loader, batch_size):
+    """ Evaluate model on dataset """
 
-# Initialize weights
-model.apply(init_weights)
-
-# Loss function
-criterion = nn.CrossEntropyLoss()
-optimizer = optim.SGD(model.parameters(), lr=learning_rate)
-
-# Cuda support
-if cuda:
-    model = model.cuda()
-    criterion = criterion.cuda()
-
-losses = []
-
-# Training
-for epoch in range(nb_epochs):
-    total_loss = 0
-
-    # Mini-batch SGD
-    for batch_idx, (x, y) in enumerate(train_loader):
+    correct = 0.
+    for i, (x, y) in enumerate(data_loader):
         # Forward pass
         x, y = Variable(x).view(batch_size, -1), Variable(y)
         if cuda:
             x = x.cuda()
             y = y.cuda()
-
-        # Predict
-        y_pred = model(x)
-
-        # Compute and print loss
-        loss = criterion(y_pred, y)
-        total_loss += loss.data[0]
-
-        # Zero gradients, perform a backward pass, and update the weights
-        optimizer.zero_grad()
-        loss.backward()
-        optimizer.step()
-
-    losses.append(total_loss / (batch_idx + 1))
-    # print("Epoch %d -- Avg Loss: %f" % (epoch, losses[epoch]))
-    
-    # Predict on test set
-    correct = 0
-    for i, (x, y) in enumerate(test_loader):
-        # Forward pass
-        x, y = Variable(x).view(1, -1), Variable(y)
-        if cuda:
-            x = x.cuda()
-            y = y.cuda()
         
         # Predict
         y_pred = model(x)
-        if (y_pred.max(1)[1] == y).data[0]:
-            correct += 1
+        correct += (y_pred.max(1)[1] == y).sum().data[0] / batch_size 
 
-    test_acc = correct / len(test_loader)
-    #print("Test Acc: %f" % acc)
-
-    print("Epoch: [%d | %d] Avg Loss: %f | Test Acc: %f" % \
-            (epoch + 1, nb_epochs, losses[epoch], test_acc))
+    # Compute accuracy
+    acc = correct / len(data_loader)
+    return acc 
 
 
+def split(data_loader, n):
+    """ Split dataset into subset of size n """
 
 
-def predict():
-    """ Evaluate model on test set """
+def build_model():
+    """ Initialize model parameters """
 
-    correct = 0
+    # MLP with 2 hidden layers
+    model = nn.Sequential(
+                nn.Linear(h0, h1), 
+                nn.ReLU(),
+                nn.Linear(h1, h2), 
+                nn.ReLU(),
+                nn.Linear(h2, h3)
+            )
 
-    for i, (x, y) in enumerate(test_loader):
-        # Foward pass
-        x, y = Variable(x).view(batch_size, -1), Variable(y)
-        if cuda:
-            x = x.cuda()
-            y = y.cuda()
+    # Initialize weights
+    model.apply(init_weights)
+
+    # Set loss function and gradient-descend optimizer
+    criterion = nn.CrossEntropyLoss()
+    optimizer = optim.SGD(model.parameters(), lr=learning_rate)
+
+    # CUDA support
+    if cuda:
+        model = model.cuda()
+        criterion = criterion.cuda()
+
+    return model, criterion, optimizer
+
+
+def train(model, criterion, optimizer):
+    """ Train model on data """
+
+    # Initialize tracked quantities
+    train_loss, train_acc, test_acc = [], [], []
+
+    # Train
+    for epoch in range(nb_epochs):
+        print("Epoch %d/%d" % (epoch + 1, nb_epochs))
+        total_loss = 0
+
+        # Mini-batch SGD
+        for i, (x, y) in enumerate(train_loader):
+            # Print progress bar
+            progress(i, len(train_loader))
+
+            # Forward pass
+            x, y = Variable(x).view(batch_size, -1), Variable(y)
+            if cuda:
+                x = x.cuda()
+                y = y.cuda()
+
+            # Predict
+            y_pred = model(x)
+
+            # Compute and print loss
+            loss = criterion(y_pred, y)
+            total_loss += loss.data[0]
+
+            # Zero gradients, perform a backward pass, and update the weights
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+
+        # Save losses and accuracies
+        train_loss.append(total_loss / (i + 1))
+        train_acc.append(predict(train_loader, batch_size))
+        test_acc.append(predict(test_loader, batch_size))
         
-        # Predict
-        y_pred = model(x)
-        if y_pred == y:
-            correct += 1
-
-    acc = correct / len(test_loader)
-    print("Accuracy: %f" % acc)
-        
+        print("Avg loss: %.4f -- Train acc: %.4f -- Test acc: %.4f" % \
+                (train_loss[epoch], train_acc[epoch], test_acc[epoch]))
 
 
-# plot(losses)
+
+if __name__ == "__main__":
+    model, criterion, optimizer = build_model()
+    train(model, criterion, optimizer)
