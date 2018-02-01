@@ -12,8 +12,8 @@ import matplotlib.pyplot as plt
 
 
 # Model parameters
-batch_size = 100
-h0, h1, h2, h3 = 784, 512, 256, 10
+batch_size = 50
+h0, h1, h2, h3 = 784, 512, 512, 10
 learning_rate = 1e-2
 nb_epochs = 10
 root = './data'
@@ -31,7 +31,7 @@ train_loader = torch.utils.data.DataLoader(
 
 test_loader = torch.utils.data.DataLoader(
     data.MNIST(root, train=False, transform=mnist),
-    batch_size=batch_size, shuffle=True)
+    batch_size=1, shuffle=True)
 
 #print(iter(train_loader).next()[0][0])
 
@@ -60,7 +60,6 @@ model = nn.Sequential(
 
 # Initialize weights
 model.apply(init_weights)
-#print(list(model.parameters()))
 
 # Loss function
 criterion = nn.CrossEntropyLoss()
@@ -74,7 +73,7 @@ if cuda:
 losses = []
 
 # Training
-for t in range(nb_epochs):
+for epoch in range(nb_epochs):
     total_loss = 0
 
     # Mini-batch SGD
@@ -98,6 +97,51 @@ for t in range(nb_epochs):
         optimizer.step()
 
     losses.append(total_loss / (batch_idx + 1))
-    print("Epoch %d -- Avg Loss: %f" % (t, losses[t]))
+    # print("Epoch %d -- Avg Loss: %f" % (epoch, losses[epoch]))
+    
+    # Predict on test set
+    correct = 0
+    for i, (x, y) in enumerate(test_loader):
+        # Forward pass
+        x, y = Variable(x).view(1, -1), Variable(y)
+        if cuda:
+            x = x.cuda()
+            y = y.cuda()
+        
+        # Predict
+        y_pred = model(x)
+        if (y_pred.max(1)[1] == y).data[0]:
+            correct += 1
 
-plot(losses)
+    test_acc = correct / len(test_loader)
+    #print("Test Acc: %f" % acc)
+
+    print("Epoch: [%d | %d] Avg Loss: %f | Test Acc: %f" % \
+            (epoch + 1, nb_epochs, losses[epoch], test_acc))
+
+
+
+
+def predict():
+    """ Evaluate model on test set """
+
+    correct = 0
+
+    for i, (x, y) in enumerate(test_loader):
+        # Foward pass
+        x, y = Variable(x).view(batch_size, -1), Variable(y)
+        if cuda:
+            x = x.cuda()
+            y = y.cuda()
+        
+        # Predict
+        y_pred = model(x)
+        if y_pred == y:
+            correct += 1
+
+    acc = correct / len(test_loader)
+    print("Accuracy: %f" % acc)
+        
+
+
+# plot(losses)
