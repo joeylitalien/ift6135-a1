@@ -1,4 +1,6 @@
 import sys
+import matplotlib.pyplot as plt
+
 
 def progress(count, total, status=''):
     """ Neat progress bar to track training """
@@ -9,3 +11,12 @@ def progress(count, total, status=''):
     bar = u"\u25A0" * filled_len + " " * (bar_len - filled_len)
     sys.stdout.write("Training [%s] %s%s %s\r" % (bar, percents, "%", status))
     sys.stdout.flush()
+
+
+def plot(pts):
+    """ Plot _ per epoch """
+
+    plt.plot(pts, 'ro')
+    plt.show()
+
+

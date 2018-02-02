@@ -1,4 +1,4 @@
-# IFT 6135: Representation Learning
+# IFT6135: Representation Learning
 # Assignment 1: Multilayer Perceptron
 # Authors: Samuel Laferriere & Joey Litalien
 
@@ -8,7 +8,8 @@ from torch.autograd import Variable
 import torch.optim as optim
 import torchvision.datasets as data
 import torchvision.transforms as transforms
-import matplotlib.pyplot as plt
+from torch.utils.data.sampler import SubsetRandomSampler
+import numpy as np
 from utils import *
 
 
@@ -47,17 +48,10 @@ test_loader = torch.utils.data.DataLoader(
                     shuffle=True)
 
 
-def plot(pts):
-    """ Plot _ per epoch """
-
-    plt.plot(pts, 'ro')
-    plt.show()
-
-
 def init_weights(tensor):
     """ Weight initialization methods (default: Xavier) """
 
-    def weights(tensor, init="glorot"):
+    def init_schemes(tensor, init="glorot"):
         if isinstance(tensor, nn.Linear):
             tensor.bias.data.fill_(0)
             if init == "zeros":
@@ -67,7 +61,7 @@ def init_weights(tensor):
             else:
                 nn.init.xavier_uniform(tensor.weight.data)
 
-    return weights(tensor, init)
+    return init_schemes(tensor, init)
 
 
 def predict(data_loader, batch_size):
@@ -90,8 +84,23 @@ def predict(data_loader, batch_size):
     return acc 
 
 
-def split(data_loader, n):
-    """ Split dataset into subset of size n """
+def split(data, n, shuffle=True):
+    """ Split dataset into two subsets (A,B)
+        where |A| = n, |B| = |data| - n 
+    """
+
+    data_size = len(data)
+    if n > data_size:
+        print("Error: Cannot split dataset since n is too large")
+        return -1
+    else:
+        indices = list(range(data_size))
+        if shuffle:
+            np.random.shuffle(indices)
+    
+        A_idx, B_idx = indices[:n], indices[n:]
+        return A_idx, B_idx
+
 
 
 def build_model():
@@ -110,22 +119,23 @@ def build_model():
     model.apply(init_weights)
 
     # Set loss function and gradient-descend optimizer
-    criterion = nn.CrossEntropyLoss()
+    loss_fn = nn.CrossEntropyLoss()
     optimizer = optim.SGD(model.parameters(), lr=learning_rate)
 
     # CUDA support
     if cuda:
         model = model.cuda()
-        criterion = criterion.cuda()
+        loss_fn = loss_fn.cuda()
 
-    return model, criterion, optimizer
+    return model, loss_fn, optimizer
 
 
-def train(model, criterion, optimizer):
+def train(model, loss_fn, optimizer, train_data_loader, 
+            valid_data_loader, test_data_loader):
     """ Train model on data """
 
     # Initialize tracked quantities
-    train_loss, train_acc, test_acc = [], [], []
+    train_loss, train_acc, valid_acc, test_acc = [], [], [], []
 
     # Train
     for epoch in range(nb_epochs):
@@ -133,7 +143,7 @@ def train(model, criterion, optimizer):
         total_loss = 0
 
         # Mini-batch SGD
-        for i, (x, y) in enumerate(train_loader):
+        for i, (x, y) in enumerate(train_data_loader):
             # Print progress bar
             progress(i, len(train_loader))
 
@@ -147,7 +157,7 @@ def train(model, criterion, optimizer):
             y_pred = model(x)
 
             # Compute and print loss
-            loss = criterion(y_pred, y)
+            loss = loss_fn(y_pred, y)
             total_loss += loss.data[0]
 
             # Zero gradients, perform a backward pass, and update the weights
@@ -157,14 +167,51 @@ def train(model, criterion, optimizer):
 
         # Save losses and accuracies
         train_loss.append(total_loss / (i + 1))
-        train_acc.append(predict(train_loader, batch_size))
-        test_acc.append(predict(test_loader, batch_size))
+        train_acc.append(predict(train_data_loader, batch_size))
+        if valid_data_loader:
+            valid_acc.append(predict(valid_data_loader, batch_size))
+        else:
+            valid_acc.append(0)
+        test_acc.append(predict(test_data_loader, batch_size))
         
-        print("Avg loss: %.4f -- Train acc: %.4f -- Test acc: %.4f" % \
-                (train_loss[epoch], train_acc[epoch], test_acc[epoch]))
+        print("Avg loss: %.4f -- Train acc: %.4f -- Val acc: %.4f -- Test acc: %.4f" % \
+                (train_loss[epoch], train_acc[epoch], valid_acc[epoch], test_acc[epoch]))
 
+
+def train_subsample(model, loss_fn, optimizer, train_size, ratios):
+    """ Train by subsampling original training set """
+    
+    # Create validation set with sampler
+    train_idx, valid_idx = split(train_data, train_size)
+    valid_sampler = SubsetRandomSampler(valid_idx)
+    valid_data_loader = torch.utils.data.DataLoader(
+                                    train_data,
+                                    sampler=valid_sampler,
+                                    batch_size=batch_size)
+
+    for a in ratios:
+        # Subsample a training set
+        Na = int(a * len(train_idx))
+        sub_train_idx = [train_idx[i] for i in 
+                            np.random.choice(len(train_idx), 
+                            size=Na, replace=False)]
+
+        # Create sampler/loader for subsampled training set
+        sub_train_sampler = SubsetRandomSampler(sub_train_idx)
+        sub_train_data_loader = torch.utils.data.DataLoader(
+                                    train_data,
+                                    sampler=sub_train_sampler,
+                                    batch_size=batch_size)
+
+        # Train
+        print("\na = %.2f, Na = %d" % (a, Na))
+        train(model, loss_fn, optimizer, 
+                sub_train_data_loader, valid_data_loader, test_loader)
 
 
 if __name__ == "__main__":
-    model, criterion, optimizer = build_model()
-    train(model, criterion, optimizer)
+    model, loss_fn, optimizer = build_model()
+
+    train_size = 50000
+    ratios = [0.01, 0.02, 0.05, 0.1, 1.0]
+    train_subsample(model, loss_fn, optimizer, train_size, ratios)
