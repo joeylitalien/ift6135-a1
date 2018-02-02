@@ -6,14 +6,16 @@ from torch.utils.data import TensorDataset
 import pickle
 
 
-def progress_bar(count, total, status=''):
+def progress_bar(count, total, status=""):
     """ Neat progress bar to track training """
 
-    bar_len = 30
-    filled_len = int(round(bar_len * count / float(total)))
+    # Track batches
+    bar_size = 30
+    filled = int(round(bar_size * count / float(total)))
     percents = round(100.0 * count / float(total), 1)
-    bar = u"\u25A0" * filled_len + " " * (bar_len - filled_len)
-    sys.stdout.write("Training [%s] %s%s %s\r" % (bar, percents, "%", status))
+    bar = u"\u25A0" * filled + " " * (bar_size - filled)
+    sys.stdout.write("Training [%s] %s%s %s\r" % \
+            (bar, percents, "%", status))
     sys.stdout.flush()
 
 

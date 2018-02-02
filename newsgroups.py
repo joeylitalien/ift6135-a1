@@ -2,6 +2,7 @@
 # Assignment 1: Multilayer Perceptron (Problem 2)
 # Authors: Samuel Laferriere & Joey Litalien
 
+import sys
 import torch
 import torch.nn as nn
 from torch.autograd import Variable
@@ -14,7 +15,7 @@ from utils import *
 
 
 # Model parameters
-batch_size = 1
+batch_size = 100
 h0, h1, h2 = 61188, 100, 20
 learning_rate = 0.2
 momentum = 0.9
@@ -53,13 +54,13 @@ def init_weights(tensor):
         nn.init.xavier_uniform(tensor.weight.data)
 
 
-def predict(data_loader, batch_size):
+def predict(data_loader):
     """ Evaluate model on dataset """
 
     correct = 0.
     for batch_idx, (x, y) in enumerate(data_loader):
         # Forward pass
-        x, y = Variable(x).view(batch_size, -1), Variable(y)
+        x, y = Variable(x).view(len(x), -1), Variable(y)
         if torch.cuda.is_available():
             x = x.cuda()
             y = y.cuda()
@@ -116,7 +117,7 @@ def train(model, loss_fn, optimizer, train_loader, test_loader):
             progress_bar(batch_idx, len(train_loader.dataset) / batch_size)
 
             # Forward pass
-            x, y = Variable(x).view(batch_size, -1), Variable(y)
+            x, y = Variable(x).view(len(x), -1), Variable(y)
             if torch.cuda.is_available():
                 x = x.cuda()
                 y = y.cuda()
@@ -134,9 +135,9 @@ def train(model, loss_fn, optimizer, train_loader, test_loader):
             optimizer.step()
 
         # Save losses and accuracies
-        train_loss.append(total_loss / (i + 1))
-        train_acc.append(predict(train_data_loader, batch_size))
-        test_acc.append(predict(test_data_loader, batch_size))
+        train_loss.append(total_loss / (batch_idx + 1))
+        train_acc.append(predict(train_loader))
+        test_acc.append(predict(test_loader))
         
         print("Avg loss: %.4f -- Train acc: %.4f -- Test acc: %.4f" % \
             (train_loss[epoch], train_acc[epoch], test_acc[epoch]))
@@ -155,19 +156,21 @@ if __name__ == "__main__":
         train_data, train_idf, test_data, test_idf = load_data(
             train_filename, test_filename, h0, train_size, test_size)
 
-        print("Saving training/test datasets...")
+        print("Saving training/test datasets...", sep=" ", end="", flush=True)
         torch.save(train_data, saved + "train_data.pt")
         torch.save(train_idf, saved + "train_idf.pt")
         torch.save(test_data, saved + "test_data.pt")
         torch.save(test_idf, saved + "test_idf.pt")
+        print(" done.\n")
 
     # Pre-parsed tensors are available to load (faster)
     else:
-        print("Loading saved training/test datasets...")
+        print("Loading saved training/test datasets...", sep=" ", end="", flush=True)
         train_data = torch.load(saved + "train_data.pt")
         train_idf = torch.load(saved + "train_idf.pt")
         test_data = torch.load(saved + "test_data.pt")
         test_idf = torch.load(saved + "test_idf.pt")
+        print(" done.\n")
 
     # Load datasets and create Torch loaders
     train_loader = DataLoader(train_data, batch_size=batch_size)

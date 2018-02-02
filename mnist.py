@@ -10,6 +10,7 @@ import torchvision.datasets as data
 import torchvision.transforms as transforms
 from torch.utils.data.sampler import SubsetRandomSampler
 import numpy as np
+import datetime
 from utils import *
 
 
@@ -18,7 +19,7 @@ batch_size = 50
 h0, h1, h2, h3 = 784, 512, 512, 10
 learning_rate = 1e-2
 init = "glorot"
-nb_epochs = 5
+nb_epochs = 10
 data_filename = "./data/mnist/mnist.pkl"
 
 
@@ -38,13 +39,13 @@ def init_weights(tensor):
     return init_schemes(tensor, init)
 
 
-def predict(data_loader, batch_size):
+def predict(data_loader):
     """ Evaluate model on dataset """
 
     correct = 0.
     for batch_idx, (x, y) in enumerate(data_loader):
         # Forward pass
-        x, y = Variable(x).view(batch_size, -1), Variable(y)
+        x, y = Variable(x).view(len(x), -1), Variable(y)
         if torch.cuda.is_available(): 
             x = x.cuda()
             y = y.cuda()
@@ -93,6 +94,7 @@ def train(model, loss_fn, optimizer, Na,
     train_loss, train_acc, valid_acc, test_acc = [], [], [], []
 
     # Train
+    start = datetime.datetime.now()
     for epoch in range(nb_epochs):
         print("Epoch %d/%d" % (epoch + 1, nb_epochs))
         total_loss = 0
@@ -103,7 +105,7 @@ def train(model, loss_fn, optimizer, Na,
             progress_bar(batch_idx, Na / batch_size)
 
             # Forward pass
-            x, y = Variable(x).view(batch_size, -1), Variable(y)
+            x, y = Variable(x).view(len(x), -1), Variable(y)
             if torch.cuda.is_available():
                 x = x.cuda()
                 y = y.cuda()
@@ -111,7 +113,7 @@ def train(model, loss_fn, optimizer, Na,
             # Predict
             y_pred = model(x)
 
-            # Compute and print loss
+            # Compute loss
             loss = loss_fn(y_pred, y)
             total_loss += loss.data[0]
 
@@ -122,15 +124,20 @@ def train(model, loss_fn, optimizer, Na,
 
         # Save losses and accuracies
         train_loss.append(total_loss / (batch_idx + 1))
-        train_acc.append(predict(train_loader, batch_size))
+        train_acc.append(predict(train_loader))
         if valid_loader:
-            valid_acc.append(predict(valid_loader, batch_size))
+            valid_acc.append(predict(valid_loader))
         else:
             valid_acc.append(0)
-        test_acc.append(predict(test_loader, batch_size))
+        test_acc.append(predict(test_loader))
         
         print("Avg loss: %.4f -- Train acc: %.4f -- Val acc: %.4f -- Test acc: %.4f" % 
             (train_loss[epoch], train_acc[epoch], valid_acc[epoch], test_acc[epoch]))
+
+    # Print elapsed time
+    end = datetime.datetime.now()
+    elapsed = str(end - start)[:-7]
+    print("\nTraining done! Elapsed time: %s\n" % elapsed)
 
 
 def train_subsample(model, loss_fn, optimizer, ratio, train_loader):
@@ -180,7 +187,8 @@ if __name__ == "__main__":
     model, loss_fn, optimizer = build_model()
 
     # Train for different reduced-size training sets
-    ratios = [0.01, 0.02, 0.05, 0.1, 1.0]
+    # ratios = [0.01, 0.02, 0.05, 0.1, 1.0]
+    ratios = [1.0]
     for a in ratios:
         Na, sub_train_loader = train_subsample(model, loss_fn, optimizer, 
                                     a, train_loader)
