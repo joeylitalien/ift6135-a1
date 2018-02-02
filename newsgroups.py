@@ -1,7 +1,15 @@
-# IFT6135: Representation Learning
-# Assignment 1: Multilayer Perceptron (Problem 2)
-# Authors: Samuel Laferriere & Joey Litalien
+# -*- coding: utf-8 -*-
+"""
+IFT6135: Representation Learning
+Assignment 1: Multilayer Perceptron (Problem 2)
 
+Authors: 
+    Samuel Laferriere <samlaf6@gmail.com>
+    Joey Litalien <joey.litalien@mail.mcgill.ca>
+"""
+
+
+from __future__ import print_function
 import sys
 import torch
 import torch.nn as nn
@@ -147,29 +155,31 @@ if __name__ == "__main__":
 
     # Create argument parser
     parser = argparse.ArgumentParser(description="Newsgroups MLP")
-    parser.add_argument("--load", help="parse data and pickle", action="store_false")
+    parser.add_argument("--load", help="unpickle preparsed tensors", 
+                action="store_true")
     args = parser.parse_args()
 
-    # If first time, parse and pickle tensors
+    # Load pre-parsed data
     if args.load:
-        # Load .data and .label files
-        train_data, train_idf, test_data, test_idf = load_data(
-            train_filename, test_filename, h0, train_size, test_size)
-
-        print("Saving training/test datasets...", sep=" ", end="", flush=True)
-        torch.save(train_data, saved + "train_data.pt")
-        torch.save(train_idf, saved + "train_idf.pt")
-        torch.save(test_data, saved + "test_data.pt")
-        torch.save(test_idf, saved + "test_idf.pt")
-        print(" done.\n")
-
-    # Pre-parsed tensors are available to load (faster)
-    else:
-        print("Loading saved training/test datasets...", sep=" ", end="", flush=True)
+        print("Loading saved training/test datasets...", 
+                sep=" ", end="", flush=True)
         train_data = torch.load(saved + "train_data.pt")
         train_idf = torch.load(saved + "train_idf.pt")
         test_data = torch.load(saved + "test_data.pt")
         test_idf = torch.load(saved + "test_idf.pt")
+        print(" done.\n")
+
+    else:
+        # Load .data and .label files
+        train_data, train_idf, test_data, test_idf = load_data(
+            train_filename, test_filename, h0, train_size, test_size)
+
+        print("Saving training/test datasets...", 
+                sep=" ", end="", flush=True)
+        torch.save(train_data, saved + "train_data.pt")
+        torch.save(train_idf, saved + "train_idf.pt")
+        torch.save(test_data, saved + "test_data.pt")
+        torch.save(test_idf, saved + "test_idf.pt")
         print(" done.\n")
 
     # Load datasets and create Torch loaders
