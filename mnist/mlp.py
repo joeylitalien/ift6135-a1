@@ -1,5 +1,5 @@
 # IFT6135: Representation Learning
-# Assignment 1: Multilayer Perceptron
+# Assignment 1: Multilayer Perceptron (Problem 1)
 # Authors: Samuel Laferriere & Joey Litalien
 
 import torch
@@ -19,33 +19,7 @@ h0, h1, h2, h3 = 784, 512, 512, 10
 learning_rate = 1e-2
 init = "glorot"
 nb_epochs = 5
-data_dir = "./data"
-cuda = False
-
-
-# MNIST dataset normalization
-normalize = transforms.Compose([transforms.ToTensor(),
-                transforms.Normalize((0.1307,), (0.3081,))])
-
-# Training set
-train_data = data.MNIST(root=data_dir, train=True, 
-                download=True, transform=normalize)
-
-# Training set loader
-train_loader = torch.utils.data.DataLoader(
-                    train_data, 
-                    batch_size=batch_size, 
-                    shuffle=True)
-
-# Test set
-test_data = data.MNIST(root=data_dir, train=False, 
-                       download=False, transform=normalize)
-
-# Test set loader
-test_loader = torch.utils.data.DataLoader(
-                    test_data,
-                    batch_size=batch_size,
-                    shuffle=True)
+data_filename = "./mnist.pkl"
 
 
 def init_weights(tensor):
@@ -68,10 +42,10 @@ def predict(data_loader, batch_size):
     """ Evaluate model on dataset """
 
     correct = 0.
-    for i, (x, y) in enumerate(data_loader):
+    for batch_idx, (x, y) in enumerate(data_loader):
         # Forward pass
         x, y = Variable(x).view(batch_size, -1), Variable(y)
-        if cuda:
+        if torch.cuda.is_available(): 
             x = x.cuda()
             y = y.cuda()
         
@@ -82,25 +56,6 @@ def predict(data_loader, batch_size):
     # Compute accuracy
     acc = correct / len(data_loader)
     return acc 
-
-
-def split(data, n, shuffle=True):
-    """ Split dataset into two subsets (A,B)
-        where |A| = n, |B| = |data| - n 
-    """
-
-    data_size = len(data)
-    if n > data_size:
-        print("Error: Cannot split dataset since n is too large")
-        return -1
-    else:
-        indices = list(range(data_size))
-        if shuffle:
-            np.random.shuffle(indices)
-    
-        A_idx, B_idx = indices[:n], indices[n:]
-        return A_idx, B_idx
-
 
 
 def build_model():
@@ -123,15 +78,15 @@ def build_model():
     optimizer = optim.SGD(model.parameters(), lr=learning_rate)
 
     # CUDA support
-    if cuda:
+    if torch.cuda.is_available():
         model = model.cuda()
         loss_fn = loss_fn.cuda()
 
     return model, loss_fn, optimizer
 
 
-def train(model, loss_fn, optimizer, train_data_loader, 
-            valid_data_loader, test_data_loader):
+def train(model, loss_fn, optimizer, Na, 
+            train_loader, valid_loader, test_loader):
     """ Train model on data """
 
     # Initialize tracked quantities
@@ -143,13 +98,13 @@ def train(model, loss_fn, optimizer, train_data_loader,
         total_loss = 0
 
         # Mini-batch SGD
-        for i, (x, y) in enumerate(train_data_loader):
+        for batch_idx, (x, y) in enumerate(train_loader):
             # Print progress bar
-            progress(i, len(train_loader))
+            progress(batch_idx, Na / batch_size)
 
             # Forward pass
             x, y = Variable(x).view(batch_size, -1), Variable(y)
-            if cuda:
+            if torch.cuda.is_available():
                 x = x.cuda()
                 y = y.cuda()
 
@@ -166,52 +121,68 @@ def train(model, loss_fn, optimizer, train_data_loader,
             optimizer.step()
 
         # Save losses and accuracies
-        train_loss.append(total_loss / (i + 1))
-        train_acc.append(predict(train_data_loader, batch_size))
-        if valid_data_loader:
-            valid_acc.append(predict(valid_data_loader, batch_size))
+        train_loss.append(total_loss / (batch_idx + 1))
+        train_acc.append(predict(train_loader, batch_size))
+        if valid_loader:
+            valid_acc.append(predict(valid_loader, batch_size))
         else:
             valid_acc.append(0)
-        test_acc.append(predict(test_data_loader, batch_size))
+        test_acc.append(predict(test_loader, batch_size))
         
-        print("Avg loss: %.4f -- Train acc: %.4f -- Val acc: %.4f -- Test acc: %.4f" % \
-                (train_loss[epoch], train_acc[epoch], valid_acc[epoch], test_acc[epoch]))
+        print("Avg loss: %.4f -- Train acc: %.4f -- Val acc: %.4f -- Test acc: %.4f" % 
+            (train_loss[epoch], train_acc[epoch], valid_acc[epoch], test_acc[epoch]))
 
 
-def train_subsample(model, loss_fn, optimizer, train_size, ratios):
-    """ Train by subsampling original training set """
+def train_subsample(model, loss_fn, optimizer, ratio, train_loader):
+    """ Train by subsampling training set """
+
+    # Get random indices from training set
+    train_size = len(train_loader.dataset)
+    indices = list(range(train_size))
     
-    # Create validation set with sampler
-    train_idx, valid_idx = split(train_data, train_size)
-    valid_sampler = SubsetRandomSampler(valid_idx)
-    valid_data_loader = torch.utils.data.DataLoader(
-                                    train_data,
-                                    sampler=valid_sampler,
-                                    batch_size=batch_size)
+    # Subsample a training set
+    Na = int(ratio * train_size)
+    np.random.shuffle(indices)
+    sub_train_idx = indices[:Na]
 
-    for a in ratios:
-        # Subsample a training set
-        Na = int(a * len(train_idx))
-        sub_train_idx = [train_idx[i] for i in 
-                            np.random.choice(len(train_idx), 
-                            size=Na, replace=False)]
+    # Create sampler/loader for subsampled training set
+    sub_train_sampler = SubsetRandomSampler(sub_train_idx)
+    sub_train_loader = torch.utils.data.DataLoader(
+                            train_data,
+                            sampler=sub_train_sampler,
+                            batch_size=batch_size)
 
-        # Create sampler/loader for subsampled training set
-        sub_train_sampler = SubsetRandomSampler(sub_train_idx)
-        sub_train_data_loader = torch.utils.data.DataLoader(
-                                    train_data,
-                                    sampler=sub_train_sampler,
-                                    batch_size=batch_size)
-
-        # Train
-        print("\na = %.2f, Na = %d" % (a, Na))
-        train(model, loss_fn, optimizer, 
-                sub_train_data_loader, valid_data_loader, test_loader)
+    return Na, sub_train_loader
 
 
 if __name__ == "__main__":
+    
+    # Load datasets and create Torch loaders
+    train_data, valid_data, test_data = load_data(data_filename)
+
+    train_loader = torch.utils.data.DataLoader(
+                        train_data, 
+                        batch_size=batch_size, 
+                        shuffle=True)
+
+    valid_loader = torch.utils.data.DataLoader(
+                        valid_data,
+                        batch_size=batch_size,
+                        shuffle=True)
+
+    test_loader = torch.utils.data.DataLoader(
+                        test_data,
+                        batch_size=batch_size,
+                        shuffle=True)
+
+
     model, loss_fn, optimizer = build_model()
 
-    train_size = 50000
+    # Train for different reduced-size training sets
     ratios = [0.01, 0.02, 0.05, 0.1, 1.0]
-    train_subsample(model, loss_fn, optimizer, train_size, ratios)
+    for a in ratios:
+        Na, sub_train_loader = train_subsample(model, loss_fn, optimizer, 
+                                    a, train_loader)
+        print("\na = %.2f, Na = %d" % (a, Na))
+        train(model, loss_fn, optimizer, Na, 
+            sub_train_loader, valid_loader, test_loader)
