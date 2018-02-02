@@ -6,7 +6,7 @@ from torch.utils.data import TensorDataset
 import pickle
 
 
-def progress(count, total, status=''):
+def progress_bar(count, total, status=''):
     """ Neat progress bar to track training """
 
     bar_len = 30
@@ -24,7 +24,7 @@ def plot(pts):
     plt.show()
 
 
-def load_data(filename):
+def unpickle(filename):
     """ Load data into training/valid/test sets """
 
     # Unpickle files (uses latin switch for py2.x to py3.x compatibility)
@@ -41,12 +41,36 @@ def load_data(filename):
     return train_data, valid_data, test_data
 
 
-def to_torch_sparse_tensor(m):
-    """ Convert SciPy sparse matrix to Torch sparse tensor """
+def load_data(train_filename, test_filename, vocab_size, train_size, test_size):
+    """ Load .data and .label files to retrieve dataset """
 
-    m = m.tocoo().astype(np.float32)
-    indices = torch.from_numpy(np.vstack((m.row, m.col))).long()
-    values = torch.from_numpy(m.data)
-    shape = torch.Size(m.shape)
+    def parse_data_file(fp, n, m):
+        X = torch.zeros(n, m).float()
+        idf = torch.ones(1, vocab_size)
+        for line in fp:
+            i, j, c = line.split()
+            i, j, c = map(int, (i, j, c))
+            X[i - 1][j - 1] = c
+            idf[0][j - 1] += 1
+        return X, idf
+
+    def parse_label_file(fp, n):
+        y = torch.zeros(n).long()
+        for i, line in enumerate(fp):
+            y[i] = int(line) - 1
+        return y
+
+    # Build training/test sets, with idf matrix
+    X_fp, y_fp = train_filename + ".data", train_filename + ".label"
+    X_train, train_idf = parse_data_file(open(X_fp, "rb"), train_size, vocab_size)
+    y_train = parse_label_file(open(y_fp, "rb"), train_size)
     
-    return torch.sparse.FloatTensor(indices, values, shape)
+    X_fp, y_fp = test_filename + ".data", test_filename + ".label"
+    X_test, test_idf = parse_data_file(open(X_fp, "rb"), test_size, vocab_size)
+    y_test = parse_label_file(open(y_fp, "rb"), test_size)
+
+    # Convert to tensors
+    train_data = TensorDataset(X_train, y_train)
+    test_data = TensorDataset(X_test, y_test)
+
+    return train_data, train_idf, test_data, test_idf

@@ -7,9 +7,9 @@ import torch.nn as nn
 from torch.autograd import Variable
 import torch.optim as optim
 from torch.utils.data import DataLoader, TensorDataset
-from sklearn.datasets import fetch_20newsgroups
 from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
 import numpy as np
+import argparse
 from utils import *
 
 
@@ -21,8 +21,9 @@ momentum = 0.9
 nb_epochs = 20
 epsilon = 1e-5
 preprocess_scheme = "count"
-train_filename = "./data/newsgroups/train"
-test_filename = "./data/newsgroups/test"
+train_filename = "./data/newsgroups/matlab/train"
+test_filename = "./data/newsgroups/matlab/test"
+saved = "./data/newsgroups/saved/"
 train_size = 11269
 test_size = 7505
 
@@ -143,10 +144,32 @@ def train(model, loss_fn, optimizer, train_loader, test_loader):
 
 if __name__ == "__main__":
 
-    # Load datasets and create Torch loaders 
-    train_data, test_data = load_data(train_filename, test_filename, 
-                                h0, train_size, test_size)
+    # Create argument parser
+    parser = argparse.ArgumentParser(description="Newsgroups MLP")
+    parser.add_argument("--load", help="parse data and pickle", action="store_false")
+    args = parser.parse_args()
 
+    # If first time, parse and pickle tensors
+    if args.load:
+        # Load .data and .label files
+        train_data, train_idf, test_data, test_idf = load_data(
+            train_filename, test_filename, h0, train_size, test_size)
+
+        print("Saving training/test datasets...")
+        torch.save(train_data, saved + "train_data.pt")
+        torch.save(train_idf, saved + "train_idf.pt")
+        torch.save(test_data, saved + "test_data.pt")
+        torch.save(test_idf, saved + "test_idf.pt")
+
+    # Pre-parsed tensors are available to load (faster)
+    else:
+        print("Loading saved training/test datasets...")
+        train_data = torch.load(saved + "train_data.pt")
+        train_idf = torch.load(saved + "train_idf.pt")
+        test_data = torch.load(saved + "test_data.pt")
+        test_idf = torch.load(saved + "test_idf.pt")
+
+    # Load datasets and create Torch loaders
     train_loader = DataLoader(train_data, batch_size=batch_size)
     test_loader = DataLoader(test_data, batch_size=batch_size)
 

@@ -100,7 +100,7 @@ def train(model, loss_fn, optimizer, Na,
         # Mini-batch SGD
         for batch_idx, (x, y) in enumerate(train_loader):
             # Print progress bar
-            progress(batch_idx, Na / batch_size)
+            progress_bar(batch_idx, Na / batch_size)
 
             # Forward pass
             x, y = Variable(x).view(batch_size, -1), Variable(y)
@@ -158,7 +158,7 @@ def train_subsample(model, loss_fn, optimizer, ratio, train_loader):
 if __name__ == "__main__":
     
     # Load datasets and create Torch loaders
-    train_data, valid_data, test_data = load_data(data_filename)
+    train_data, valid_data, test_data = unpickle(data_filename)
 
     train_loader = torch.utils.data.DataLoader(
                         train_data, 
@@ -176,6 +176,7 @@ if __name__ == "__main__":
                         shuffle=True)
 
 
+    # Compile model
     model, loss_fn, optimizer = build_model()
 
     # Train for different reduced-size training sets
