@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 IFT6135: Representation Learning
 Assignment 1: Multilayer Perceptron (Problem 1)
@@ -12,8 +13,6 @@ import torch
 import torch.nn as nn
 from torch.autograd import Variable
 import torch.optim as optim
-import torchvision.datasets as data
-import torchvision.transforms as transforms
 from torch.utils.data.sampler import SubsetRandomSampler
 import numpy as np
 import datetime
