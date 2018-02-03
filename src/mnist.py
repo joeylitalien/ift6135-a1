@@ -185,6 +185,7 @@ def subsample_train(model, loss_fn, optimizer, ratio, train_loader):
     return sub_train_size, sub_train_loader
 
 
+"""
 if __name__ == "__main__":
     
     # Load datasets and create Torch loaders
@@ -213,12 +214,4 @@ if __name__ == "__main__":
 
     # Train for different reduced-size training sets
     # ratios = [0.01, 0.02, 0.05, 0.1, 1.0]
-    """
-    ratios = [1.0]
-    for a in ratios:
-        Na, sub_train_loader = subsample_train(model, loss_fn, optimizer, 
-                                    a, train_loader)
-        print("\na = %.2f, Na = %d" % (a, Na))
-        train(model, loss_fn, optimizer, Na, 
-            sub_train_loader, valid_loader, test_loader)
-    """
+"""
