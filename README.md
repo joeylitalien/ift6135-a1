@@ -9,8 +9,3 @@ Tested on Python 3.6.3.
 
 ### Downloading datasets
 To download both MNIST and the 20newsgroups datasets, run `setup.sh`. This will create a `data` folder inside the existing project and fetch the files.
-
----
-## Problem 1: MNIST
-
-
