@@ -1,13 +1,12 @@
 # -*- coding: utf-8 -*-
 """
 IFT6135: Representation Learning
-Assignment 1: Multilayer Perceptron (Problem 2)
+Assignment 1: Multilayer Perceptrons (Problem 2)
 
 Authors: 
     Samuel Laferriere <samlaf92@gmail.com>
     Joey Litalien <joey.litalien@mail.mcgill.ca>
 """
-
 
 from __future__ import print_function
 import torch

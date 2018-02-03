@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 IFT6135: Representation Learning
-Assignment 1: Multilayer Perceptron (Problem 1)
+Assignment 1: Multilayer Perceptrons (Problem 1)
 
 Authors: 
     Samuel Laferriere <samlaf92@gmail.com>
@@ -20,31 +20,28 @@ from utils import *
 
 
 # Model parameters
-batch_size = 50
+batch_size = 64
 h0, h1, h2, h3 = 784, 512, 512, 10
 learning_rate = 1e-2
-init = "glorot"
-nb_epochs = 10
+#init = "glorot"
+nb_epochs = 3
 data_filename = "../data/mnist/mnist.pkl"
 
 
-def init_weights(tensor):
+def init_weights(tensor, init):
     """ Weight initialization methods (default: Xavier) """
 
-    def init_schemes(tensor, init="glorot"):
-        if isinstance(tensor, nn.Linear):
-            tensor.bias.data.fill_(0)
-            if init == "zeros":
-                tensor.weight.data.fill_(0)
-            elif init == "uniform":
-                tensor.weight.data.uniform_(0,1)
-            else:
-                nn.init.xavier_uniform(tensor.weight.data)
-
-    return init_schemes(tensor, init)
+    if isinstance(tensor, nn.Linear):
+        tensor.bias.data.fill_(0)
+        if init == "zeros":
+            tensor.weight.data.fill_(0)
+        elif init == "normal":
+            tensor.weight.data.normal_(0,1)
+        else:
+            nn.init.xavier_uniform(tensor.weight.data)
 
 
-def predict(data_loader):
+def predict(model, data_loader):
     """ Evaluate model on dataset """
 
     correct = 0.
@@ -64,20 +61,21 @@ def predict(data_loader):
     return acc 
 
 
-def build_model():
+def build_model(input_dim, h1, h2, output_dim, init):
     """ Initialize model parameters """
 
     # MLP with 2 hidden layers
     model = nn.Sequential(
-                nn.Linear(h0, h1), 
+                nn.Linear(input_dim, h1), 
                 nn.ReLU(),
                 nn.Linear(h1, h2), 
                 nn.ReLU(),
-                nn.Linear(h2, h3)
+                nn.Linear(h2, output_dim)
             )
 
     # Initialize weights
-    model.apply(init_weights)
+    weights = lambda tensor : init_weights(tensor, init)
+    model.apply(weights)
 
     # Set loss function and gradient-descend optimizer
     loss_fn = nn.CrossEntropyLoss()
@@ -92,7 +90,7 @@ def build_model():
 
 
 def train(model, loss_fn, optimizer, Na, 
-            train_loader, valid_loader, test_loader):
+            train_loader, valid_loader, test_loader, gen_gap=False):
     """ Train model on data """
 
     # Initialize tracked quantities
@@ -129,23 +127,43 @@ def train(model, loss_fn, optimizer, Na,
 
         # Save losses and accuracies
         train_loss.append(total_loss / (batch_idx + 1))
-        train_acc.append(predict(train_loader))
+        train_acc.append(predict(model, train_loader))
         if valid_loader:
-            valid_acc.append(predict(valid_loader))
+            valid_acc.append(predict(model, valid_loader))
         else:
-            valid_acc.append(0)
-        test_acc.append(predict(test_loader))
-        
-        print("Avg loss: %.4f -- Train acc: %.4f -- Val acc: %.4f -- Test acc: %.4f" % 
-            (train_loss[epoch], train_acc[epoch], valid_acc[epoch], test_acc[epoch]))
+            valid_acc.append(-1)
+        if test_loader:
+            test_acc.append(predict(model, test_loader))
+        else:
+            test_acc.append(-1)
+      
+        # Format printing depending on tracked quantities
+        if valid_loader and test_loader and gen_gap:
+            gen_gap = train_acc[epoch] - test_acc[epoch]
+            print("Avg loss: %.4f -- Train acc: %.4f -- Val acc: %.4f -- Test acc: %.4f -- Gen gap %.4f" % (train_loss[epoch], train_acc[epoch], valid_acc[epoch], test_acc[epoch], gen_gap))
+
+        if valid_loader and test_loader and not gen_gap:
+            print("Avg loss: %.4f -- Train acc: %.4f -- Val acc: %.4f -- Test acc: %.4f" % 
+                (train_loss[epoch], train_acc[epoch], valid_acc[epoch], test_acc[epoch]))
+    
+        if valid_loader and not test_loader:
+            print("Avg loss: %.4f -- Train acc: %.4f -- Val acc: %.4f" % 
+                (train_loss[epoch], train_acc[epoch], valid_acc[epoch]))
+
+        if not valid_loader and not test_loader:
+            print("Avg loss: %.4f -- Train acc: %.4f" % 
+                (train_loss[epoch], train_acc[epoch]))
+
 
     # Print elapsed time
     end = datetime.datetime.now()
     elapsed = str(end - start)[:-7]
-    print("\nTraining done! Elapsed time: %s\n" % elapsed)
+    print("Training done! Elapsed time: %s\n" % elapsed)
+
+    return train_loss, train_acc, valid_acc, test_acc
 
 
-def train_subsample(model, loss_fn, optimizer, ratio, train_loader):
+def subsample_train(model, loss_fn, optimizer, ratio, train_loader):
     """ Train by subsampling training set """
 
     # Get random indices from training set
@@ -153,18 +171,18 @@ def train_subsample(model, loss_fn, optimizer, ratio, train_loader):
     indices = list(range(train_size))
     
     # Subsample a training set
-    Na = int(ratio * train_size)
+    sub_train_size = int(ratio * train_size)
     np.random.shuffle(indices)
-    sub_train_idx = indices[:Na]
+    sub_train_idx = indices[:sub_train_size]
 
     # Create sampler/loader for subsampled training set
     sub_train_sampler = SubsetRandomSampler(sub_train_idx)
     sub_train_loader = torch.utils.data.DataLoader(
-                            train_data,
+                            train_loader.dataset,
                             sampler=sub_train_sampler,
                             batch_size=batch_size)
 
-    return Na, sub_train_loader
+    return sub_train_size, sub_train_loader
 
 
 if __name__ == "__main__":
@@ -189,14 +207,18 @@ if __name__ == "__main__":
 
 
     # Compile model
-    model, loss_fn, optimizer = build_model()
+    model, loss_fn, optimizer = build_model(h0, h1, h2, h3, init="normal")
+    train(model, loss_fn, optimizer, len(train_data), train_loader, valid_loader, [])
+
 
     # Train for different reduced-size training sets
     # ratios = [0.01, 0.02, 0.05, 0.1, 1.0]
+    """
     ratios = [1.0]
     for a in ratios:
-        Na, sub_train_loader = train_subsample(model, loss_fn, optimizer, 
+        Na, sub_train_loader = subsample_train(model, loss_fn, optimizer, 
                                     a, train_loader)
         print("\na = %.2f, Na = %d" % (a, Na))
         train(model, loss_fn, optimizer, Na, 
             sub_train_loader, valid_loader, test_loader)
+    """

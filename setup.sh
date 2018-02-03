@@ -1,6 +1,5 @@
 # Create directories for datasets
-mkdir data
-mkdir data/mnist
+mkdir data data/mnist
 
 # Fetch MNIST dataset
 wget http://deeplearning.net/data/mnist/mnist.pkl.gz

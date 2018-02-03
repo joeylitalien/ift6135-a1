@@ -10,7 +10,7 @@ def progress_bar(count, total, status=""):
     """ Neat progress bar to track training """
 
     # Track batches
-    bar_size = 30
+    bar_size = 20
     filled = int(round(bar_size * count / float(total)))
     percents = round(100.0 * count / float(total), 1)
     bar = u"\u25A0" * filled + " " * (bar_size - filled)
@@ -19,10 +19,13 @@ def progress_bar(count, total, status=""):
     sys.stdout.flush()
 
 
-def plot(pts):
-    """ Plot _ per epoch """
+def scatter_plot(pts, xlabel, ylabel, title):
+    """ Plot graph; only takes a single list """
 
-    plt.plot(pts, 'ro')
+    plt.xlabel(xlabel)
+    plt.ylabel(ylabel)
+    plt.title(title)
+    plt.plot(pts, 'bo')
     plt.show()
 
 
