@@ -66,7 +66,7 @@ def unpickle_mnist(filename):
     return train_data, valid_data, test_data
 
 
-def load_newsgroup_data(train_filename, test_filename, vocab_size, train_size, test_size):
+def load_newsgroups(train_filename, test_filename, vocab_size, train_size, test_size):
     """ Load .data and .label files to retrieve dataset """
 
     def parse_data_file(fp, n, m):

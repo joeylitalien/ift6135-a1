@@ -40,7 +40,7 @@ def init_weights(tensor, init):
             nn.init.xavier_uniform(tensor.weight.data)
 
 
-def predict(model, data_loader):
+def predict(model, batch_size, data_loader):
     """ Evaluate model on dataset """
 
     correct = 0.
@@ -60,7 +60,7 @@ def predict(model, data_loader):
     return acc 
 
 
-def build_model(input_dim, h1, h2, output_dim, init):
+def build_model(input_dim, h1, h2, output_dim, init, lr):
     """ Initialize model parameters """
 
     # MLP with 2 hidden layers
@@ -78,7 +78,7 @@ def build_model(input_dim, h1, h2, output_dim, init):
 
     # Set loss function and gradient-descend optimizer
     loss_fn = nn.CrossEntropyLoss()
-    optimizer = optim.SGD(model.parameters(), lr=learning_rate)
+    optimizer = optim.SGD(model.parameters(), lr=lr)
 
     # CUDA support
     if torch.cuda.is_available():

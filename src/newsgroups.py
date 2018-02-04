@@ -21,11 +21,10 @@ from utils import *
 
 
 # Model parameters
-batch_size = 100
+batch_size = 64
 h0, h1, h2 = 61188, 100, 20
 learning_rate = 0.2
 momentum = 0.9
-nb_epochs = 20
 epsilon = 1e-5
 preprocess_scheme = "count"
 train_filename = "../data/newsgroups/matlab/train"
@@ -60,7 +59,7 @@ def init_weights(tensor):
         nn.init.xavier_uniform(tensor.weight.data)
 
 
-def predict(data_loader):
+def predict(model, data_loader):
     """ Evaluate model on dataset """
 
     correct = 0.
@@ -80,14 +79,14 @@ def predict(data_loader):
     return acc 
 
 
-def build_model():
+def build_model(input_dim, h1, output_dim, learning_rate, momentum):
     """ Initialize model parameters """
 
     # MLP with a single hidden layer
     model = nn.Sequential(
-                nn.Linear(h0, h1), 
+                nn.Linear(input_dim, h1), 
                 nn.ReLU(),
-                nn.Linear(h1, h2)
+                nn.Linear(h1, output_dim)
             )
 
     # Initialize weights
@@ -106,7 +105,7 @@ def build_model():
     return model, loss_fn, optimizer
 
 
-def train(model, loss_fn, optimizer, train_loader, test_loader):
+def train(model, loss_fn, optimizer, nb_epochs, train_loader, test_loader):
     """ Train model on data """
 
     # Initialize tracked quantities
@@ -185,7 +184,7 @@ if __name__ == "__main__":
     test_loader = DataLoader(test_data, batch_size=batch_size)
 
     # Compile model
-    model, loss_fn, optimizer = build_model()
+    model, loss_fn, optimizer = build_model(h0, h1, h2, learning_rate, momentum)
 
     # Train
     train(model, loss_fn, optimizer, train_loader, test_loader)
