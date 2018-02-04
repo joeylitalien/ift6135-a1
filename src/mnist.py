@@ -24,7 +24,6 @@ batch_size = 64
 h0, h1, h2, h3 = 784, 512, 512, 10
 learning_rate = 1e-2
 #init = "glorot"
-nb_epochs = 3
 data_filename = "../data/mnist/mnist.pkl"
 
 
@@ -89,7 +88,7 @@ def build_model(input_dim, h1, h2, output_dim, init):
     return model, loss_fn, optimizer
 
 
-def train(model, loss_fn, optimizer, Na, 
+def train(model, loss_fn, optimizer, nb_epochs, Na, 
             train_loader, valid_loader, test_loader, gen_gap=False):
     """ Train model on data """
 
@@ -153,7 +152,6 @@ def train(model, loss_fn, optimizer, Na,
         if not valid_loader and not test_loader:
             print("Avg loss: %.4f -- Train acc: %.4f" % 
                 (train_loss[epoch], train_acc[epoch]))
-
 
     # Print elapsed time
     end = datetime.datetime.now()

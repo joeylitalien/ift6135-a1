@@ -1,5 +1,6 @@
 import sys
 import matplotlib.pyplot as plt
+from matplotlib.ticker import MaxNLocator
 import numpy as np
 import torch
 from torch.utils.data import TensorDataset
@@ -9,7 +10,6 @@ import pickle
 def progress_bar(count, total, status=""):
     """ Neat progress bar to track training """
 
-    # Track batches
     bar_size = 20
     filled = int(round(bar_size * count / float(total)))
     percents = round(100.0 * count / float(total), 1)
@@ -19,17 +19,37 @@ def progress_bar(count, total, status=""):
     sys.stdout.flush()
 
 
-def scatter_plot(pts, xlabel, ylabel, title):
+def plot_per_epoch(d, d_label, title):
     """ Plot graph; only takes a single list """
 
-    plt.xlabel(xlabel)
-    plt.ylabel(ylabel)
-    plt.title(title)
-    plt.plot(pts, 'bo')
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+    ax.scatter(range(1,len(d)+1), d, c="b", s=6, marker="o", label=d_label)
+    ax.set_xlabel("Epoch")
+    ax.set_ylabel(d_label)
+    ax.xaxis.set_major_locator(MaxNLocator(integer=True))
+    ax.set_title(title)
     plt.show()
 
 
-def unpickle(filename):
+def plots_per_epoch(d, d_labels, tracked_label, title):
+    """ Plot graph; takes multiple sets of points """
+
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+    colors = ["b", "r", "g", "m", "c", "y"]
+    for i in range(len(d)):
+        ax.scatter(range(1,len(d[i])+1), d[i], c=colors[i], s=6, 
+            marker="o", label=d_labels[i])
+    plt.legend(loc="upper left")
+    ax.set_xlabel("Epoch")
+    ax.xaxis.set_major_locator(MaxNLocator(integer=True))
+    ax.set_ylabel(tracked_label)
+    ax.set_title(title)
+    plt.show()
+
+
+def unpickle_mnist(filename):
     """ Load data into training/valid/test sets """
 
     # Unpickle files (uses latin switch for py2.x to py3.x compatibility)
@@ -46,7 +66,7 @@ def unpickle(filename):
     return train_data, valid_data, test_data
 
 
-def load_data(train_filename, test_filename, vocab_size, train_size, test_size):
+def load_newsgroup_data(train_filename, test_filename, vocab_size, train_size, test_size):
     """ Load .data and .label files to retrieve dataset """
 
     def parse_data_file(fp, n, m):
