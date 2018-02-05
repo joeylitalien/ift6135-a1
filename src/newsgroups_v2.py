@@ -84,11 +84,11 @@ class Newsgroups():
         return acc 
 
 
-    def train(self, nb_epochs, train_loader, test_loader, gen_gap=False):
+    def train(self, nb_epochs, train_loader, test_loader):
         """ Train model on data """
 
         # Initialize tracked quantities
-        train_loss, train_acc, valid_acc, test_acc = [], [], [], []
+        train_loss, train_acc, test_acc = [], [], []
 
         # Train
         start = datetime.datetime.now()
@@ -139,11 +139,11 @@ class Newsgroups():
 if __name__ == "__main__":
 
     # Model parameters
-    batch_size = 64
+    batch_size = 8
     layers = [61188, 100, 20]
     learning_rate = 0.2
     momentum = 0.9
-    epsilon = 1e-5
+    eps = 1e-5
     preprocess_scheme = "count"
     train_filename = "../data/newsgroups/matlab/train"
     test_filename = "../data/newsgroups/matlab/test"
@@ -160,7 +160,7 @@ if __name__ == "__main__":
     # Load pre-parsed data
     if args.load:
         print("Loading saved training/test sets...", 
-                sep=" ", end="", flush=True)
+                sep=" ", end="")
         train_data = torch.load(saved + "train_data.pt")
         train_idf = torch.load(saved + "train_tfidf.pt")
         test_data = torch.load(saved + "test_data.pt")
@@ -169,13 +169,13 @@ if __name__ == "__main__":
 
     else:
         print("Loading training/test sets for the first time...",
-                sep=" ", end="", flush=True)
+                sep=" ", end="")
         # Load .data and .label files
         train_data, train_idf, test_data, test_idf = load_newsgroups(
             train_filename, test_filename, layers[0], train_size, test_size)
 
         print(" done.\nSaving training/test sets...", 
-                sep=" ", end="", flush=True)
+                sep=" ", end="")
         torch.save(train_data, saved + "train_data.pt")
         torch.save(train_idf, saved + "train_tfidf.pt")
         torch.save(test_data, saved + "test_data.pt")
@@ -186,6 +186,15 @@ if __name__ == "__main__":
     train_loader = DataLoader(train_data, batch_size=batch_size)
     test_loader = DataLoader(test_data, batch_size=batch_size)
 
+    train_stand = standardize(train_data, eps)
+    test_stand = standardize(test_data, eps)
+    train_loader_s = DataLoader(train_stand, batch_size=batch_size)
+    test_loader_s = DataLoader(test_stand, batch_size=batch_size)
+ 
+    # Build and train model
+    mlp_s = Newsgroups(layers, learning_rate, momentum)
+    mlp_s.train(1, train_loader_s, test_loader_s, len(train_loader_s.dataset))
+
     # Build MLP and train
-    mlp = Newsgroups(layers, learning_rate, momentum)
-    mlp.train(10, train_loader, test_loader, len(train_loader.dataset))
+    # mlp = Newsgroups(layers, learning_rate, momentum)
+    # mlp.train(10, train_loader, test_loader, len(train_loader.dataset))

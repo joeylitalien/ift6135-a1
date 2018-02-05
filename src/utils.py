@@ -82,7 +82,17 @@ def unpickle_mnist(filename):
     return train_data, valid_data, test_data
 
 
-def load_newsgroups(train_filename, test_filename, vocab_size, train_size, test_size):
+def standardize(X, eps):
+    """ Standardize tensor """
+
+    means = X.mean(0)
+    stds = X.std(0) + eps
+    stand = (X - means) / stds
+
+    return stand
+
+
+def load_newsgroups(train_filename, test_filename, vocab_size, train_size, test_size, pp, eps=1e-5):
     """ Load .data and .label files to retrieve dataset """
 
     def parse_data_file(fp, n, m):
@@ -94,8 +104,7 @@ def load_newsgroups(train_filename, test_filename, vocab_size, train_size, test_
             X[i - 1][j - 1] = c
             idf[j - 1] += 1
         idf = (vocab_size / idf).log()
-        tfidf = torch.mul(X, idf)
-        return X, tfidf
+        return X, idf
 
     def parse_label_file(fp, n):
         y = torch.zeros(n).long()
@@ -105,16 +114,31 @@ def load_newsgroups(train_filename, test_filename, vocab_size, train_size, test_
 
     # Build training/test sets, with idf matrix
     X_fp, y_fp = train_filename + ".data", train_filename + ".label"
-    X_train, X_train_tfidf = parse_data_file(open(X_fp, "rb"), train_size, vocab_size)
+    X_train, X_train_idf = parse_data_file(open(X_fp, "rb"), train_size, vocab_size)
     y_train = parse_label_file(open(y_fp, "rb"), train_size)
     
     X_fp, y_fp = test_filename + ".data", test_filename + ".label"
-    X_test, X_test_tfidf = parse_data_file(open(X_fp, "rb"), test_size, vocab_size)
+    X_test, X_test_idf = parse_data_file(open(X_fp, "rb"), test_size, vocab_size)
     y_test = parse_label_file(open(y_fp, "rb"), test_size)
 
     # Convert to tensors
-    train_data = TensorDataset(X_train, y_train)
-    test_data = TensorDataset(X_test, y_test)
-    train_tfidf = TensorDataset(X_train_tfidf, y_train)
-    test_tfidf = TensorDataset(X_test_tfidf, y_test)
-    return train_data, train_tfidf, test_data, test_tfidf
+    if pp == "count":
+    	train_data = TensorDataset(X_train, y_train)
+    	test_data = TensorDataset(X_test, y_test)
+
+    elif pp == "tfidf":
+	X_train_tfidf = torch.mul(X_train, X_train_idf)
+        X_test_tfidf = torch.mul(X_test, X_test_idf)
+        train_data = TensorDataset(X_train_tfidf, y_train)
+        test_data = TensorDataset(X_test_tfidf, y_test)
+
+    elif pp == "stand":
+	X_train_stand = standardize(X_train, eps)
+	X_test_stand = standardize(X_test, eps)
+        train_data = TensorDataset(X_train_stand, y_train)
+        test_data = TensorDataset(X_test_stand, y_test)
+
+    else:
+	print("Processing step undefined.")
+    
+    return train_data, test_data
