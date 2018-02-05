@@ -92,15 +92,16 @@ def load_newsgroups(train_filename, test_filename, vocab_size, train_size, test_
 
     # Build training/test sets, with idf matrix
     X_fp, y_fp = train_filename + ".data", train_filename + ".label"
-    X_train, train_tfidf = parse_data_file(open(X_fp, "rb"), train_size, vocab_size)
+    X_train, X_train_tfidf = parse_data_file(open(X_fp, "rb"), train_size, vocab_size)
     y_train = parse_label_file(open(y_fp, "rb"), train_size)
     
     X_fp, y_fp = test_filename + ".data", test_filename + ".label"
-    X_test, test_tfidf = parse_data_file(open(X_fp, "rb"), test_size, vocab_size)
+    X_test, X_test_tfidf = parse_data_file(open(X_fp, "rb"), test_size, vocab_size)
     y_test = parse_label_file(open(y_fp, "rb"), test_size)
 
     # Convert to tensors
     train_data = TensorDataset(X_train, y_train)
     test_data = TensorDataset(X_test, y_test)
-
+    train_tfidf = TensorDataset(X_train_tfidf, y_train)
+    test_tfidf = TensorDataset(X_test_tfidf, y_test)
     return train_data, train_tfidf, test_data, test_tfidf
