@@ -118,7 +118,7 @@ class MNIST():
             
             # Predict
             y_pred = self.model(x)
-            correct += (y_pred.max(1)[1] == y).sum().data[0] / data_loader.batch_size 
+            correct += float((y_pred.max(1)[1] == y).sum().data[0]) / data_loader.batch_size 
 
         # Compute accuracy
         acc = correct / len(data_loader)
@@ -212,5 +212,5 @@ if __name__ == "__main__":
     train_loader, valid_loader, test_loader = get_data_loaders(data_filename, batch_size)
 
     # Build MLP and train
-    mlp = MNIST(layers, learning_rate, "normal")
+    mlp = MNIST(layers, learning_rate, "glorot")
     mlp.train(10, train_loader, valid_loader, test_loader, len(train_loader.dataset))

@@ -53,7 +53,10 @@ def unpickle_mnist(filename):
     """ Load data into training/valid/test sets """
 
     # Unpickle files (uses latin switch for py2.x to py3.x compatibility)
-    train, valid, test = pickle.load(open(filename, "rb"), encoding="latin1")
+    if sys.version_info[0] < 3:
+        train, valid, test = pickle.load(open(filename, "rb"))
+    else:
+        train, valid, test = pickle.load(open(filename, "rb"), encoding="latin1")
     X_train, y_train = map(torch.from_numpy, train)
     X_valid, y_valid = map(torch.from_numpy, valid)
     X_test, y_test = map(torch.from_numpy, test)
@@ -71,13 +74,15 @@ def load_newsgroups(train_filename, test_filename, vocab_size, train_size, test_
 
     def parse_data_file(fp, n, m):
         X = torch.zeros(n, m).float()
-        idf = torch.ones(1, vocab_size)
+        idf = torch.ones(vocab_size)
         for line in fp:
             i, j, c = line.split()
             i, j, c = map(int, (i, j, c))
             X[i - 1][j - 1] = c
-            idf[0][j - 1] += 1
-        return X, idf
+            idf[j - 1] += 1
+        idf = (vocab_size / idf).log()
+        tfidf = torch.mul(X, idf)
+        return X, tfidf
 
     def parse_label_file(fp, n):
         y = torch.zeros(n).long()
@@ -87,15 +92,15 @@ def load_newsgroups(train_filename, test_filename, vocab_size, train_size, test_
 
     # Build training/test sets, with idf matrix
     X_fp, y_fp = train_filename + ".data", train_filename + ".label"
-    X_train, train_idf = parse_data_file(open(X_fp, "rb"), train_size, vocab_size)
+    X_train, train_tfidf = parse_data_file(open(X_fp, "rb"), train_size, vocab_size)
     y_train = parse_label_file(open(y_fp, "rb"), train_size)
     
     X_fp, y_fp = test_filename + ".data", test_filename + ".label"
-    X_test, test_idf = parse_data_file(open(X_fp, "rb"), test_size, vocab_size)
+    X_test, test_tfidf = parse_data_file(open(X_fp, "rb"), test_size, vocab_size)
     y_test = parse_label_file(open(y_fp, "rb"), test_size)
 
     # Convert to tensors
     train_data = TensorDataset(X_train, y_train)
     test_data = TensorDataset(X_test, y_test)
 
-    return train_data, train_idf, test_data, test_idf
+    return train_data, train_tfidf, test_data, test_tfidf
