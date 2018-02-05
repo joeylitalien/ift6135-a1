@@ -84,11 +84,12 @@ class Newsgroups():
         return acc 
 
 
-    def train(self, nb_epochs, train_loader, test_loader, gen_gap=False):
+    def train(self, nb_epochs, train_loader, test_loader, gen_gap=False, by_epoch=True):
         """ Train model on data """
 
         # Initialize tracked quantities
         train_loss, train_acc, valid_acc, test_acc = [], [], [], []
+        nb_updates = 0
 
         # Train
         start = datetime.datetime.now()
@@ -119,10 +120,19 @@ class Newsgroups():
                 loss.backward()
                 self.optimizer.step()
 
+                if not by_epoch:
+                    train_loss.append(loss)
+                    train_acc.append(self.predict(train_loader))
+                    test_acc.append(self.predict(test_loader))
+                    nb_updates += 1
+                    if (nb_updates == nb_epochs):
+                        break
+
             # Save losses and accuracies
-            train_loss.append(total_loss / (batch_idx + 1))
-            train_acc.append(self.predict(train_loader))
-            test_acc.append(self.predict(test_loader))
+            if by_epoch:
+                train_loss.append(total_loss / (batch_idx + 1))
+                train_acc.append(self.predict(train_loader))
+                test_acc.append(self.predict(test_loader))
 
             # Print stats
             print("Avg loss: %.4f -- Train acc: %.4f -- Test acc: %.4f" % 
