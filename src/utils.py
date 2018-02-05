@@ -19,6 +19,19 @@ def progress_bar(count, total, status=""):
     sys.stdout.flush()
 
 
+def plot_error_bars(x1, x2, err, xlabel, ylabel, title):
+    """ Plot error bar graph """
+
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+    ax.errorbar(x1, x2, err, linestyle="None", marker="o", 
+        ecolor="g", c="b", elinewidth=1, capsize=3)
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel(ylabel)
+    ax.set_title(title)
+    plt.show()
+
+
 def plot_per_epoch(d, d_label, title):
     """ Plot graph; only takes a single list """
 
