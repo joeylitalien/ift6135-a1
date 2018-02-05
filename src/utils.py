@@ -41,7 +41,7 @@ def plots_per_epoch(d, d_labels, tracked_label, title):
     for i in range(len(d)):
         ax.scatter(range(1,len(d[i])+1), d[i], c=colors[i], s=6, 
             marker="o", label=d_labels[i])
-    plt.legend(loc="upper left")
+    plt.legend(loc="lower right")
     ax.set_xlabel("Epoch")
     ax.xaxis.set_major_locator(MaxNLocator(integer=True))
     ax.set_ylabel(tracked_label)

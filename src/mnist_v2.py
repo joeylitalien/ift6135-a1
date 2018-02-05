@@ -13,6 +13,7 @@ import torch
 import torch.nn as nn
 from torch.autograd import Variable
 import torch.optim as optim
+from torch.utils.data import DataLoader
 from torch.utils.data.sampler import SubsetRandomSampler
 import numpy as np
 import datetime
@@ -24,20 +25,9 @@ def get_data_loaders(data_filename, batch_size):
 
     train_data, valid_data, test_data = unpickle_mnist(data_filename)
 
-    train_loader = torch.utils.data.DataLoader(
-                            train_data, 
-                            batch_size=batch_size, 
-                            shuffle=True)
-
-    valid_loader = torch.utils.data.DataLoader(
-                            valid_data,
-                            batch_size=batch_size,
-                            shuffle=True)
-
-    test_loader = torch.utils.data.DataLoader(
-                            test_data,
-                            batch_size=batch_size,
-                            shuffle=True)
+    train_loader = DataLoader(train_data, batch_size=batch_size, shuffle=True)
+    valid_loader = DataLoader(valid_data, batch_size=batch_size, shuffle=True)
+    test_loader = DataLoader(test_data, batch_size=batch_size, shuffle=True)
 
     return train_loader, valid_loader, test_loader
 
