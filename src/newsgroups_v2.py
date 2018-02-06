@@ -84,7 +84,7 @@ class Newsgroups():
         return acc 
 
 
-    def train(self, nb_epochs, train_loader, test_loader, gen_gap=False):
+    def train(self, nb_epochs, train_loader, test_loader):
         """ Train model on data """
 
         # Initialize tracked quantities
