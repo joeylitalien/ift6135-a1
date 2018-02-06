@@ -141,8 +141,8 @@ def train(model, loss_fn, optimizer, nb_epochs, train_loader, test_loader):
 
         # Save losses and accuracies
         train_loss.append(total_loss / (batch_idx + 1))
-        train_acc.append(predict(train_loader))
-        test_acc.append(predict(test_loader))
+        train_acc.append(predict(model, train_loader))
+        test_acc.append(predict(model, test_loader))
         
         print("Avg loss: %.4f -- Train acc: %.4f -- Test acc: %.4f" % \
             (train_loss[epoch], train_acc[epoch], test_acc[epoch]))
