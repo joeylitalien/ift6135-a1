@@ -74,6 +74,8 @@ class MNIST():
                 tensor.weight.data.fill_(0)
             elif init == "normal":
                 tensor.weight.data.normal_(0,1)
+            elif init == "glorot_normal":
+                nn.init.xavier_normal(tensor.weight.data)
             else:
                 nn.init.xavier_uniform(tensor.weight.data)
 
@@ -187,7 +189,7 @@ class MNIST():
                     (train_loss[epoch], train_acc[epoch], valid_acc[epoch]))
 
             if not valid_loader and not test_loader:
-                print("Avg loss: %.4f -- Train acc: %.4f" % 
+                print("Avg loss: %.4f -- Train acc: %.4f  " % 
                     (train_loss[epoch], train_acc[epoch]))
 
 
