@@ -123,22 +123,22 @@ def load_newsgroups(train_filename, test_filename, vocab_size, train_size, test_
 
     # Convert to tensors
     if pp == "count":
-    	train_data = TensorDataset(X_train, y_train)
-    	test_data = TensorDataset(X_test, y_test)
+        train_data = TensorDataset(X_train, y_train)
+        test_data = TensorDataset(X_test, y_test)
 
     elif pp == "tfidf":
-	X_train_tfidf = torch.mul(X_train, X_train_idf)
+        X_train_tfidf = torch.mul(X_train, X_train_idf)
         X_test_tfidf = torch.mul(X_test, X_test_idf)
         train_data = TensorDataset(X_train_tfidf, y_train)
         test_data = TensorDataset(X_test_tfidf, y_test)
 
     elif pp == "stand":
-	X_train_stand = standardize(X_train, eps)
-	X_test_stand = standardize(X_test, eps)
+        X_train_stand = standardize(X_train, eps)
+        X_test_stand = standardize(X_test, eps)
         train_data = TensorDataset(X_train_stand, y_train)
         test_data = TensorDataset(X_test_stand, y_test)
 
     else:
-	print("Processing step undefined.")
+      print("Processing step undefined.")
     
     return train_data, test_data

@@ -84,7 +84,7 @@ class Newsgroups():
         return acc 
 
 
-    def train(self, nb_epochs, train_loader, test_loader, by_epoch=True):
+    def train(self, nb_epochs, train_loader, test_loader, nb_max_updates=0):
         """ Train model on data """
 
         # Initialize tracked quantities
@@ -92,19 +92,23 @@ class Newsgroups():
         nb_updates = 0
 
         # Train
-	break_switch = False
+        break_switch = False
         start = datetime.datetime.now()
         for epoch in range(nb_epochs):
-	    if break_switch:
-		break
+	   
+            # Hack to get out if max number of updates reached
+            if break_switch:
+                break
 
-            print("Epoch %d/%d" % (epoch + 1, nb_epochs))
+            print("Epoch {:d}/{:d}".format(epoch + 1, nb_epochs))
             total_loss = 0
 
             # Mini-batch SGD
             for batch_idx, (x, y) in enumerate(train_loader):
-                # Print progress bar
-                # progress_bar(batch_idx, 5000)
+
+                # Print progress bar only when ran normally
+                if not nb_max_updates:
+                    progress_bar(batch_idx, len(train_loader.dataset) / train_loader.batch_size)
 
                 # Forward pass
                 x, y = Variable(x).view(len(x), -1), Variable(y)
@@ -124,22 +128,25 @@ class Newsgroups():
                 loss.backward()
                 self.optimizer.step()
 
-                if not by_epoch:
+                if nb_max_updates > 0:
                     train_loss.append(loss.data[0])
+                    if nb_updates % 100 == 0:
+                        print("Update {:4d}/{:d} -- Cur Loss: {:.4f}".format(
+                            nb_updates, nb_max_updates, loss.data[0]))
                     nb_updates += 1
-                    if (nb_updates == nb_epochs):
+                    if (nb_updates == nb_max_updates):
                         break_switch = True
-			break
+                        break
 
             # Save losses and accuracies
-            if by_epoch:
+            if not nb_max_updates:
                 train_loss.append(total_loss / (batch_idx + 1))
                 train_acc.append(self.predict(train_loader))
                 test_acc.append(self.predict(test_loader))
 
-            	# Print stats
-            	print("Avg loss: %.4f -- Train acc: %.4f -- Test acc: %.4f" % 
-                    (train_loss[epoch], train_acc[epoch], test_acc[epoch]))
+                # Print stats
+                print("Avg loss: {:.4f} -- Train acc: {:.4f} -- Test acc: {:.4f}".format( 
+                    train_loss[epoch], train_acc[epoch], test_acc[epoch]))
         
         # Print elapsed time
         end = datetime.datetime.now()
