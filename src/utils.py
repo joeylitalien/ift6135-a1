@@ -87,7 +87,9 @@ def standardize(X, eps):
 
     means = X.mean(0)
     stds = X.std(0) + eps
+    # stds = torch.zeros(61188)
     stand = (X - means) / stds
+    # print((stds.sum(0) == 0).any())
 
     return stand
 
@@ -121,24 +123,42 @@ def load_newsgroups(train_filename, test_filename, vocab_size, train_size, test_
     X_test, X_test_idf = parse_data_file(open(X_fp, "rb"), test_size, vocab_size)
     y_test = parse_label_file(open(y_fp, "rb"), test_size)
 
+    # Split training into train/valid sets
+    N = len(X_train)
+    indices = range(N)
+    np.random.shuffle(indices)
+    idx_train = indices[int(N/5):]
+    idx_valid = indices[:int(N/5)]
+    X_valid = X_train[idx_valid]
+    X_valid_idf = X_train_idf[idx_valid]
+    y_valid = y_train[idx_valid]
+    X_train = X_train[idx_train]
+    X_train_idf = X_train_idf[idx_train]
+    y_train = y_train[idx_train]
+
     # Convert to tensors
     if pp == "count":
         train_data = TensorDataset(X_train, y_train)
+        valid_data = TensorDataset(X_valid, y_valid)
         test_data = TensorDataset(X_test, y_test)
 
     elif pp == "tfidf":
-        X_train_tfidf = torch.mul(X_train, X_train_idf)
+        X_train_tfidf = torch.mul(X_train, X_train_idf.view(-1,1))
+        X_valid_tfidf = torch.mul(X_valid, X_valid_idf.view(-1,1))
         X_test_tfidf = torch.mul(X_test, X_test_idf)
         train_data = TensorDataset(X_train_tfidf, y_train)
+        valid_data = TensorDataset(X_valid_tfidf, y_valid)
         test_data = TensorDataset(X_test_tfidf, y_test)
 
     elif pp == "stand":
         X_train_stand = standardize(X_train, eps)
+        X_valid_stand = standardize(X_valid, eps)
         X_test_stand = standardize(X_test, eps)
         train_data = TensorDataset(X_train_stand, y_train)
+        valid_data = TensorDataset(X_valid_stand, y_valid)
         test_data = TensorDataset(X_test_stand, y_test)
 
     else:
       print("Processing step undefined.")
     
-    return train_data, test_data
+    return train_data, valid_data, test_data

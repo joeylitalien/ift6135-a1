@@ -17,6 +17,7 @@ from torch.utils.data import DataLoader
 from torch.utils.data.sampler import SubsetRandomSampler
 import numpy as np
 import datetime
+import collections
 from utils import *
 
 
@@ -72,6 +73,10 @@ class MNIST():
             tensor.bias.data.fill_(0)
             if init == "zeros":
                 tensor.weight.data.fill_(0)
+            elif init == "epsilon":
+                tensor.weight.data.fill_(0.2)
+            elif init == "uniform":
+                tensor.weight.data.uniform_(0,1)
             elif init == "normal":
                 tensor.weight.data.normal_(0,1)
             elif init == "glorot_normal":
@@ -84,13 +89,13 @@ class MNIST():
         """ Initialize model parameters """
 
         # MLP with 2 hidden layers
-        self.model = nn.Sequential(
-                        nn.Linear(self.layers[0], self.layers[1]), 
-                        nn.ReLU(),
-                        nn.Linear(self.layers[1], self.layers[2]), 
-                        nn.ReLU(),
-                        nn.Linear(self.layers[2], self.layers[3])
-                    )
+        self.model = nn.Sequential(collections.OrderedDict([
+                        ("fc1", nn.Linear(self.layers[0], self.layers[1])), 
+                        ("relu1", nn.ReLU()),
+                        ("fc2", nn.Linear(self.layers[1], self.layers[2])), 
+                        ("relu2", nn.ReLU()),
+                        ("fc3", nn.Linear(self.layers[2], self.layers[3]))
+                     ]))
 
         # Initialize weights
         weights = lambda tensor : self.init_weights(tensor, self.init)
@@ -139,6 +144,8 @@ class MNIST():
         for epoch in range(nb_epochs):
             print("Epoch %d/%d" % (epoch + 1, nb_epochs))
             total_loss = 0
+
+            print(self.model.fc2.weight[:15])
 
             # Mini-batch SGD
             for batch_idx, (x, y) in enumerate(train_loader):
@@ -206,7 +213,7 @@ if __name__ == "__main__":
     # Model parameters
     batch_size = 64
     layers = [784, 512, 512, 10]
-    learning_rate = 1e-2
+    learning_rate = 1e-3
     nb_epochs = 3
     data_filename = "../data/mnist/mnist.pkl"
 
@@ -214,5 +221,5 @@ if __name__ == "__main__":
     train_loader, valid_loader, test_loader = get_data_loaders(data_filename, batch_size)
 
     # Build MLP and train
-    mlp = MNIST(layers, learning_rate, "glorot")
-    mlp.train(10, train_loader, valid_loader, test_loader, len(train_loader.dataset))
+    mlp = MNIST(layers, learning_rate, "epsilon")
+    mlp.train(100, train_loader, valid_loader, test_loader, len(train_loader.dataset))

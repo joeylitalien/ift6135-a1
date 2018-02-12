@@ -84,11 +84,11 @@ class Newsgroups():
         return acc 
 
 
-    def train(self, nb_epochs, train_loader, test_loader, nb_max_updates=0):
+    def train(self, nb_epochs, train_loader, valid_loader, nb_max_updates=0):
         """ Train model on data """
 
         # Initialize tracked quantities
-        train_loss, train_acc, test_acc = [], [], []
+        train_loss, train_acc, valid_acc = [], [], []
         nb_updates = 0
 
         # Train
@@ -131,7 +131,7 @@ class Newsgroups():
                 if nb_max_updates > 0:
                     train_loss.append(loss.data[0])
                     if nb_updates % 100 == 0:
-                        print("Update {:4d}/{:d} -- Cur Loss: {:.4f}".format(
+                        print("Update {:4d}/{:d} -- Cur loss: {:.4f}".format(
                             nb_updates, nb_max_updates, loss.data[0]))
                     nb_updates += 1
                     if (nb_updates == nb_max_updates):
@@ -142,18 +142,18 @@ class Newsgroups():
             if not nb_max_updates:
                 train_loss.append(total_loss / (batch_idx + 1))
                 train_acc.append(self.predict(train_loader))
-                test_acc.append(self.predict(test_loader))
+                valid_acc.append(self.predict(valid_loader))
 
                 # Print stats
-                print("Avg loss: {:.4f} -- Train acc: {:.4f} -- Test acc: {:.4f}".format( 
-                    train_loss[epoch], train_acc[epoch], test_acc[epoch]))
+                print("Avg loss: {:.4f} -- Train acc: {:.4f} -- Val acc: {:.4f}".format( 
+                    train_loss[epoch], train_acc[epoch], valid_acc[epoch]))
         
         # Print elapsed time
         end = datetime.datetime.now()
         elapsed = str(end - start)[:-7]
         print("Training done! Elapsed time: %s\n" % elapsed)
 
-        return train_loss, train_acc, test_acc
+        return train_loss, train_acc, valid_acc
 
 
 if __name__ == "__main__":
