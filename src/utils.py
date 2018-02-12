@@ -104,8 +104,8 @@ def load_newsgroups(train_filename, test_filename, vocab_size, train_size, test_
             i, j, c = line.split()
             i, j, c = map(int, (i, j, c))
             X[i - 1][j - 1] = c
-            idf[j - 1] += 1
-        idf = (vocab_size / idf).log()
+            idf[i - 1] += 1
+        idf = (train_size / idf).log()
         return X, idf
 
     def parse_label_file(fp, n):
